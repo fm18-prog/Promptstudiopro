@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptForge Studio PRO — Suite Génération & Studio Vidéo IA</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f3ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#1e1b4b',
+                        },
+                        dark: {
+                            bg: '#09090b',
+                            card: '#18181b',
+                            border: '#27272a',
+                            input: '#27272a',
+                            hover: '#27272a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stripe JS SDK -->
+    <script src="https://js.stripe.com/v3/"></script>
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #f4f4f5; }
+        code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .glass-panel { background: rgba(24, 24, 27, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #18181b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between custom-scrollbar bg-dark-bg text-zinc-100">
+
+    <!-- HEADER / NAVBAR -->
+    <header class="border-b border-dark-border glass-panel sticky top-0 z-40 px-4 lg:px-8 py-3.5">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <i class="fa-solid fa-wand-magic-sparkles text-white text-lg"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">PromptForge Studio PRO</h1>
+                        <span id="userStatusBadge" class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">FREE</span>
+                    </div>
+                    <p class="text-xs text-zinc-400 hidden sm:block">Générateur Prompts & Studio Création Vidéo IA</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <!-- Daily Quota Counter -->
+                <div id="quotaContainer" class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-zinc-300">
+                    <i class="fa-solid fa-bolt text-amber-400"></i>
+                    <span>Crédits gratuits : <strong id="quotaCount" class="text-white">3/3</strong></span>
+                </div>
+
+                <!-- Upgrade Button -->
+                <button onclick="openPaywallModal()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:opacity-90 transition text-white shadow-md shadow-indigo-500/10 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-crown text-amber-300"></i>
+                    <span id="upgradeBtnText">Devenir PRO</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- NAVIGATION TABS FOR MODES -->
+    <div class="max-w-7xl mx-auto px-4 lg:px-8 pt-4 w-full">
+        <div class="flex space-x-2 border-b border-zinc-800 pb-2">
+            <button id="tabBtnPrompts" onclick="switchMode('prompts')" class="px-4 py-2 text-xs font-bold rounded-lg bg-indigo-600 text-white transition flex items-center space-x-2">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Générateur de Prompts</span>
+            </button>
+            <button id="tabBtnVideoStudio" onclick="switchMode('videoStudio')" class="px-4 py-2 text-xs font-bold rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 transition flex items-center space-x-2 border border-zinc-800">
+                <i class="fa-solid fa-video text-purple-400"></i>
+                <span>Studio Générateur Vidéo IA 🎬</span>
+                <span class="bg-gradient-to-r from-purple-500 to-pink-500 text-black font-black text-[9px] px-1.5 py-0.5 rounded">NOUVEAU</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTENT -->
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 py-6 flex-grow w-full">
+
+        <!-- MODE 1: PROMPT GENERATOR STUDIO -->
+        <div id="modePromptsView" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- LEFT PANEL: CONTROLS & FORM (7 COLS) -->
+            <section class="lg:col-span-7 flex flex-col space-y-5">
+                
+                <!-- Category Tabs -->
+                <div class="glass-panel p-2 rounded-xl flex items-center space-x-1 overflow-x-auto custom-scrollbar text-xs font-medium">
+                    <button onclick="filterCategory('all')" class="cat-tab active px-3 py-1.5 rounded-lg bg-indigo-600 text-white transition whitespace-nowrap">Tous</button>
+                    <button onclick="filterCategory('video')" class="cat-tab px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-zinc-300 transition whitespace-nowrap flex items-center space-x-1">
+                        <span>🎬 Vidéo & Scripts</span>
+                    </button>
+                    <button onclick="filterCategory('ecommerce')" class="cat-tab px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-zinc-300 transition whitespace-nowrap">🛍️ E-commerce</button>
+                    <button onclick="filterCategory('seo')" class="cat-tab px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-zinc-300 transition whitespace-nowrap">🔍 SEO</button>
+                    <button onclick="filterCategory('b2b')" class="cat-tab px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-zinc-300 transition whitespace-nowrap">💼 B2B & Prospection</button>
+                    <button onclick="filterCategory('code')" class="cat-tab px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-zinc-300 transition whitespace-nowrap">💻 Code</button>
+                    <button onclick="filterCategory('midjourney')" class="cat-tab px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-zinc-300 transition whitespace-nowrap">🎨 Midjourney</button>
+                </div>
+
+                <!-- Preset Selection & Target AI Selector -->
+                <div class="glass-panel p-4 rounded-xl space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-300 mb-1.5">1. Choisir un Modèle Prédéfini</label>
+                            <select id="presetSelect" onchange="applyPreset()" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500">
+                                <option value="">-- Personnalisé --</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-300 mb-1.5">2. IA Cible</label>
+                            <select id="modelSelect" onchange="toggleModelFields()" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500 font-semibold text-indigo-400">
+                                <option value="chatgpt">ChatGPT (GPT-4o)</option>
+                                <option value="claude">Claude 3.5 Sonnet (XML)</option>
+                                <option value="deepseek">DeepSeek R1 / V3 (Chain-of-Thought)</option>
+                                <option value="midjourney">Midjourney v6 (Prompt Image)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Video Controls Panel -->
+                    <div id="videoControlsPanel" class="p-3 bg-zinc-900/80 border border-indigo-500/20 rounded-lg space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-indigo-400 flex items-center space-x-1.5">
+                                <i class="fa-solid fa-video"></i>
+                                <span>Paramètres Création Vidéo</span>
+                            </span>
+                            <span class="text-[10px] bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/20">Optimisé Shorts & YouTube</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-[11px] text-zinc-400 mb-1">Plateforme</label>
+                                <select id="videoPlatform" class="w-full bg-zinc-800 border border-zinc-700 rounded px-2.5 py-1.5 text-xs text-zinc-200">
+                                    <option value="TikTok / IG Reels / YT Shorts">TikTok / Reels / Shorts</option>
+                                    <option value="YouTube Longform (8-12 min)">YouTube Longform</option>
+                                    <option value="Publicité Vidéo (15s - 30s)">Publicité Vidéo</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-zinc-400 mb-1">Durée Cible</label>
+                                <select id="videoDuration" class="w-full bg-zinc-800 border border-zinc-700 rounded px-2.5 py-1.5 text-xs text-zinc-200">
+                                    <option value="30 secondes">30 secondes (Court)</option>
+                                    <option value="60 secondes">60 secondes (Moyen)</option>
+                                    <option value="3 à 5 minutes">3 à 5 minutes</option>
+                                    <option value="8 à 12 minutes">8 à 12 minutes (Monétisé)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-zinc-400 mb-1">Style de Hook (Accroche)</label>
+                                <select id="videoHook" class="w-full bg-zinc-800 border border-zinc-700 rounded px-2.5 py-1.5 text-xs text-zinc-200">
+                                    <option value="Accroche visuelle + phrase choc (3s)">Choc 3 sec (Virale)</option>
+                                    <option value="Question intrigante">Question Intrigante</option>
+                                    <option value="Erreur courante / Problème">Problème / Solution</option>
+                                    <option value="Storytelling captivant">Storytelling</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Midjourney Extra Settings -->
+                    <div id="midjourneyPanel" class="hidden p-3 bg-zinc-900/80 border border-purple-500/20 rounded-lg space-y-3">
+                        <span class="text-xs font-bold text-purple-400 flex items-center space-x-1.5">
+                            <i class="fa-solid fa-image"></i>
+                            <span>Paramètres Midjourney v6</span>
+                        </span>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-[11px] text-zinc-400 mb-1">Ratio d'Aspect (--ar)</label>
+                                <select id="mjAr" class="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs">
+                                    <option value="--ar 16:9">16:9 (YouTube / Écran)</option>
+                                    <option value="--ar 9:16">9:16 (TikTok / Reels)</option>
+                                    <option value="--ar 1:1">1:1 (Carré)</option>
+                                    <option value="--ar 4:5">4:5 (Instagram Feed)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-zinc-400 mb-1">Stylisation (--s)</label>
+                                <select id="mjStylize" class="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs">
+                                    <option value="--s 250">Standard (250)</option>
+                                    <option value="--s 750">Élevé (750)</option>
+                                    <option value="--s 1000">Artistique max (1000)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-zinc-400 mb-1">Prompt Négatif (--no)</label>
+                                <input id="mjNo" type="text" placeholder="text, blur, watermark" class="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Form Fields -->
+                <div class="glass-panel p-5 rounded-xl space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">Rôle / Persona de l'IA</label>
+                        <input id="fieldRole" type="text" placeholder="ex: Expert en montage vidéo TikTok et rétention de script" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-100 focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">Objectif Principal / Tâche</label>
+                        <input id="fieldTask" type="text" placeholder="ex: Rédiger un script complet de 45s avec voix off et B-roll" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-100 focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">Contexte, Cible & Ton</label>
+                        <textarea id="fieldContext" rows="3" placeholder="ex: Niche de l'immobilier, public 25-45 ans, ton dynamique, accrocheur et direct" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-100 focus:outline-none focus:border-indigo-500 custom-scrollbar"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-300 mb-1">Format de Réponse Attendu</label>
+                        <input id="fieldFormat" type="text" placeholder="ex: Tableau avec 3 colonnes : Temps (s), Script Voix Off, Visuel & Effet Sonore" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-100 focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <!-- Action Button -->
+                    <button onclick="handleGenerate()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/25 transition transform active:scale-[0.99] flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-bolt text-amber-300"></i>
+                        <span>Générer le Prompt Structuré</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- RIGHT PANEL: OUTPUT & PREVIEW (5 COLS) -->
+            <section class="lg:col-span-5 flex flex-col space-y-5">
+                <div class="glass-panel p-5 rounded-xl flex-grow flex flex-col justify-between space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <h2 class="text-sm font-bold text-zinc-200">Prompt Généré</h2>
+                            </div>
+                            <div class="flex items-center space-x-3 text-[11px] text-zinc-400 font-mono">
+                                <span>Mots: <strong id="wordCount" class="text-zinc-200">0</strong></span>
+                                <span>Tokens est: <strong id="tokenCount" class="text-indigo-400">0</strong></span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 relative">
+                            <textarea id="promptOutput" readonly rows="14" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs font-mono text-zinc-200 leading-relaxed focus:outline-none custom-scrollbar select-all" placeholder="Remplissez les champs de gauche et cliquez sur Générer pour afficher le prompt..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="copyToClipboard()" class="py-2.5 px-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg transition flex items-center justify-center space-x-1.5 border border-zinc-700">
+                                <i class="fa-regular fa-copy"></i>
+                                <span>Copier (1-Click)</span>
+                            </button>
+                            <button onclick="downloadAsTxt()" class="py-2.5 px-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg transition flex items-center justify-center space-x-1.5 border border-zinc-700">
+                                <i class="fa-solid fa-download"></i>
+                                <span>Télécharger .TXT</span>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="exportPdfNotion()" class="py-2 px-3 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-medium rounded-lg transition border border-zinc-800 flex items-center justify-center space-x-1.5">
+                                <i class="fa-solid fa-file-export text-purple-400"></i>
+                                <span>Export PDF / Notion</span>
+                            </button>
+                            <button onclick="saveToFavorites()" class="py-2 px-3 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-medium rounded-lg transition border border-zinc-800 flex items-center justify-center space-x-1.5">
+                                <i class="fa-solid fa-star text-amber-400"></i>
+                                <span>Sauvegarder</span>
+                            </button>
+                        </div>
+                        <div class="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-400">
+                            <span>Lancer directement dans :</span>
+                            <div class="flex items-center space-x-2">
+                                <a href="https://chatgpt.com" target="_blank" class="px-2 py-1 bg-emerald-950/50 text-emerald-400 border border-emerald-800/50 rounded hover:bg-emerald-900/50 transition text-[11px]">ChatGPT</a>
+                                <a href="https://claude.ai" target="_blank" class="px-2 py-1 bg-amber-950/50 text-amber-400 border border-amber-800/50 rounded hover:bg-amber-900/50 transition text-[11px]">Claude</a>
+                                <a href="https://chat.deepseek.com" target="_blank" class="px-2 py-1 bg-blue-950/50 text-blue-400 border border-blue-800/50 rounded hover:bg-blue-900/50 transition text-[11px]">DeepSeek</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- MODE 2: INTEGRATED AI VIDEO STUDIO GENERATOR -->
+        <div id="modeVideoStudioView" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- VIDEO GENERATOR CONTROLS (6 COLS) -->
+            <section class="lg:col-span-6 glass-panel p-6 rounded-2xl space-y-5">
+                <div class="flex items-center space-x-3 pb-3 border-b border-zinc-800">
+                    <div class="w-9 h-9 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center border border-purple-500/30">
+                        <i class="fa-solid fa-clapperboard text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-white">Générateur & Studio Vidéo IA</h2>
+                        <p class="text-xs text-zinc-400">Transformez des scripts ou descriptions visuelles en séquences vidéo IA</p>
+                    </div>
+                </div>
+
+                <!-- Video Prompt Input -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-semibold text-zinc-300">Prompt Visuel / Description de la Scène Vidéo</label>
+                    <textarea id="videoStudioPrompt" rows="4" placeholder="ex: Un drone survole une ville futuriste néon sous la pluie au crépuscule, mouvement ultra-fluide, style cinématographique 4k..." class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-100 focus:outline-none focus:border-purple-500 custom-scrollbar"></textarea>
+                </div>
+
+                <!-- Video Style & Preset Settings -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Moteur Vidéo IA</label>
+                        <select id="videoEngineSelect" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-200">
+                            <option value="runway">Runway Gen-2 / Gen-3 Alpha</option>
+                            <option value="luma">Luma Dream Machine 1.5</option>
+                            <option value="pika">Pika Labs FX</option>
+                            <option value="svd">Stable Video Diffusion HD</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Mouvement de Caméra</label>
+                        <select id="videoCameraMotion" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-zinc-200">
+                            <option value="Zoom In (Nouveau plan)">Zoom Avant Lisse</option>
+                            <option value="Pan Right (Travel latéral)">Travelling Droite</option>
+                            <option value="Drone Flythrough (Survol)">Survol par Drone</option>
+                            <option value="Static Cinematic (Fixe)">Fixe Cinématographique</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Video Generation Button -->
+                <button onclick="generateAIVideoSimulated()" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-sm shadow-lg shadow-purple-600/25 transition transform active:scale-[0.99] flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-play text-amber-300"></i>
+                    <span>Générer le Rendu Vidéo IA (MP4)</span>
+                </button>
+            </section>
+
+            <!-- VIDEO PLAYER & PREVIEW PLAYER (6 COLS) -->
+            <section class="lg:col-span-6 glass-panel p-6 rounded-2xl flex flex-col justify-between space-y-4">
+                <div>
+                    <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
+                        <span class="text-xs font-bold text-zinc-300 flex items-center space-x-2">
+                            <i class="fa-solid fa-film text-purple-400"></i>
+                            <span>Lecteur & Aperçu Vidéo HD</span>
+                        </span>
+                        <span id="videoStatusBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">En attente</span>
+                    </div>
+
+                    <!-- Video Player Container -->
+                    <div class="mt-4 aspect-video rounded-xl bg-black border border-zinc-800 relative overflow-hidden flex items-center justify-center">
+                        <video id="aiVideoPlayer" class="w-full h-full object-cover hidden" controls loop autoplay muted></video>
+                        
+                        <!-- Placeholder State -->
+                        <div id="videoPlaceholder" class="text-center p-6 space-y-3">
+                            <div class="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto text-purple-400 shadow-inner">
+                                <i class="fa-solid fa-clapperboard text-2xl"></i>
+                            </div>
+                            <p class="text-xs text-zinc-400 max-w-xs mx-auto">Saisissez une description visuelle et cliquez sur <strong>Générer le Rendu Vidéo IA</strong> pour lancer le calcul...</p>
+                        </div>
+
+                        <!-- Loading State Overlay -->
+                        <div id="videoLoadingSpinner" class="hidden absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-3">
+                            <div class="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                            <span class="text-xs font-bold text-white tracking-wide">Rendu vidéo en cours par l'IA...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Video Actions -->
+                <div class="grid grid-cols-2 gap-3 pt-3 border-t border-zinc-800">
+                    <button onclick="downloadGeneratedVideo()" class="py-2.5 px-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg transition border border-zinc-700 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-download text-emerald-400"></i>
+                        <span>Télécharger MP4</span>
+                    </button>
+                    <a href="https://runwayml.com" target="_blank" class="py-2.5 px-3 bg-purple-950/60 hover:bg-purple-900/60 text-purple-300 text-xs font-semibold rounded-lg transition border border-purple-800/50 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        <span>Ouvrir dans Runway ML</span>
+                    </a>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-dark-border py-4 px-4 text-center text-xs text-zinc-500 glass-panel">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between">
+            <span>© 2026 PromptForge Studio PRO — Tous droits réservés.</span>
+            <span class="mt-2 sm:mt-0 text-zinc-400">Propulsé par HTML5, Tailwind CSS & Stripe</span>
+        </div>
+    </footer>
+
+    <!-- PAYWALL / UPGRADE MODAL -->
+    <div id="paywallModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full rounded-2xl p-6 border border-indigo-500/30 shadow-2xl space-y-6 relative overflow-hidden">
+            <button onclick="closePaywallModal()" class="absolute top-4 right-4 text-zinc-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="text-center space-y-2">
+                <div class="inline-flex p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 mb-1 border border-indigo-500/20">
+                    <i class="fa-solid fa-crown text-2xl text-amber-300"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white">Débloquez PromptForge Studio PRO</h3>
+                <p class="text-xs text-zinc-400">Générez des prompts illimités, débloquez les scripts vidéos et le Studio Vidéo IA</p>
+            </div>
+
+            <div class="space-y-2 text-xs text-zinc-300">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-check text-emerald-400"></i>
+                    <span>Générations & exports illimités (Sans quota)</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-check text-emerald-400"></i>
+                    <span>Accès complet au <strong>Studio Vidéo IA & Rendu MP4</strong></span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-check text-emerald-400"></i>
+                    <span>Mode Prompting Midjourney v6 complet avec ratios</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <div onclick="redirectToStripe('monthly')" class="cursor-pointer p-4 rounded-xl border border-indigo-500/50 bg-indigo-950/30 hover:bg-indigo-900/40 transition text-center space-y-1">
+                    <span class="text-[10px] uppercase tracking-wider text-indigo-400 font-bold">Mensuel</span>
+                    <div class="text-xl font-extrabold text-white">9,99 € <span class="text-xs font-normal text-zinc-400">/mois</span></div>
+                    <p class="text-[10px] text-zinc-400">Sans engagement</p>
+                </div>
+
+                <div onclick="redirectToStripe('lifetime')" class="cursor-pointer p-4 rounded-xl border-2 border-amber-500/80 bg-amber-950/20 hover:bg-amber-900/30 transition text-center space-y-1 relative">
+                    <span class="absolute -top-2.5 right-2 bg-amber-500 text-black text-[9px] font-black px-2 py-0.5 rounded-full">POPULAIRE</span>
+                    <span class="text-[10px] uppercase tracking-wider text-amber-400 font-bold">Accès à Vie</span>
+                    <div class="text-xl font-extrabold text-white">29,00 € <span class="text-xs font-normal text-zinc-400">une fois</span></div>
+                    <p class="text-[10px] text-zinc-400">Accès illimité à vie</p>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-zinc-800 flex items-center space-x-2">
+                <input id="licenseCodeInput" type="text" placeholder="Entrez un code de licence (ex: PRO2026)" class="flex-grow bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500 uppercase">
+                <button onclick="activateLicenseCode()" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold rounded-lg text-zinc-200">Activer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        const PRESETS = [
+            { id: 'v_script_short', category: 'video', isPro: false, title: '🎬 Script TikTok / Shorts (30s - 60s)', role: 'Expert en scripts courts TikTok et Reels à haute rétention', task: 'Rédiger un script vidéo complet de 45 secondes pour réseaux sociaux', context: 'Niche grand public, accroche visuelle forte dès les 3 premières secondes, phrases courtes, voix off captivante', format: 'Tableau chronologique : Temps (s) | Script Voix Off | Visuel & Textes à l\'écran | Effet Sonore' },
+            { id: 'v_youtube_long', category: 'video', isPro: true, title: '📹 Script YouTube Long (8-12 min Monétisé)', role: 'YouTube Strategist & Scriptwriter Senior', task: 'Créer la structure complète d\'une vidéo YouTube de 10 minutes avec boucles de rétention', context: 'Sujet à forte valeur ajoutée, introduction avec boucle ouverte, développement en 3 parties principales, appel à l\'abonnement naturel', format: 'Plan détaillé par chapitre avec timing, accroche d\'introduction, transition et CTA final' },
+            { id: 'v_thumbnail_mj', category: 'video', isPro: false, title: '🖼️ Prompt Miniature YouTube (Midjourney)', role: 'Directeur Artistique & Spécialiste CTR YouTube', task: 'Créer un prompt ultra-visuel Midjourney v6 pour une miniature YouTube à fort taux de clic', context: 'Composition à contraste fort, visage expressif en gros plan, éclairage cinématographique néon, espace réservé pour le texte', format: 'Prompt Midjourney v6 en anglais avec paramètres --ar 16:9 --v 6.0 --stylize 750' },
+            { id: 'e_product_desc', category: 'ecommerce', isPro: false, title: '🛍️ Fiche Produit E-Commerce Persuasive', role: 'Copywriter E-commerce & Direct Response', task: 'Rédiger une fiche produit captivante axée bénéfices et conversion', context: 'Public acheteur, ton chaleureux mais convaincant, traitement des objections courantes', format: 'Titre H1, Accroche, 4 bénéfices clés à puces, Caractéristiques techniques et FAQ' },
+            { id: 'seo_article', category: 'seo', isPro: false, title: '🔍 Article SEO Optimisé H2/H3', role: 'Rédacteur Web SEO Senior', task: 'Rédiger la structure d\'un article de blog de 1500 mots optimisé pour le référencement', context: 'Intégration naturelle du mot-clé principal et du champ lexical secondaire, intention de recherche informative', format: 'Structure H1, H2, H3 complète avec mots-clés suggérés et méta-description' }
+        ];
+
+        let state = {
+            isPro: false,
+            dailyQuota: 3,
+            currentCategory: 'all',
+            activeView: 'prompts'
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initStorage();
+            handleUrlParams();
+            renderPresets();
+        });
+
+        function switchMode(view) {
+            state.activeView = view;
+            const btnPrompts = document.getElementById('tabBtnPrompts');
+            const btnVideo = document.getElementById('tabBtnVideoStudio');
+            const viewPrompts = document.getElementById('modePromptsView');
+            const viewVideo = document.getElementById('modeVideoStudioView');
+
+            if (view === 'prompts') {
+                viewPrompts.classList.remove('hidden');
+                viewVideo.classList.add('hidden');
+                btnPrompts.className = "px-4 py-2 text-xs font-bold rounded-lg bg-indigo-600 text-white transition flex items-center space-x-2";
+                btnVideo.className = "px-4 py-2 text-xs font-bold rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 transition flex items-center space-x-2 border border-zinc-800";
+            } else {
+                if (!state.isPro) {
+                    openPaywallModal();
+                    return;
+                }
+                viewPrompts.classList.add('hidden');
+                viewVideo.classList.remove('hidden');
+                btnVideo.className = "px-4 py-2 text-xs font-bold rounded-lg bg-purple-600 text-white transition flex items-center space-x-2";
+                btnPrompts.className = "px-4 py-2 text-xs font-bold rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 transition flex items-center space-x-2 border border-zinc-800";
+            }
+        }
+
+        function generateAIVideoSimulated() {
+            const promptText = document.getElementById('videoStudioPrompt').value.trim();
+            if (!promptText) return showToast('Veuillez d\'abord saisir une description visuelle.', 'error');
+
+            const spinner = document.getElementById('videoLoadingSpinner');
+            const placeholder = document.getElementById('videoPlaceholder');
+            const player = document.getElementById('aiVideoPlayer');
+            const badge = document.getElementById('videoStatusBadge');
+
+            spinner.classList.remove('hidden');
+            badge.innerText = 'Calcul en cours...';
+            badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20';
+
+            setTimeout(() => {
+                spinner.classList.add('hidden');
+                placeholder.classList.add('hidden');
+                player.classList.remove('hidden');
+
+                player.src = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+                player.play();
+
+                badge.innerText = 'Rendu Vidéo HD prêt';
+                badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                showToast('Vidéo IA générée avec succès ! 🎬', 'success');
+            }, 3000);
+        }
+
+        function downloadGeneratedVideo() {
+            const player = document.getElementById('aiVideoPlayer');
+            if (!player.src) return showToast('Aucune vidéo disponible pour le téléchargement.', 'error');
+            window.open(player.src, '_blank');
+        }
+
+        function initStorage() {
+            if (localStorage.getItem('promptforge_ispro') === 'true') {
+                enableProStatus();
+            }
+        }
+
+        function handleUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('payment') === 'success' || urlParams.get('licence') === 'PRO2026') {
+                enableProStatus();
+                showToast('Statut PRO activé avec succès ! 🎉', 'success');
+            }
+        }
+
+        function enableProStatus() {
+            state.isPro = true;
+            localStorage.setItem('promptforge_ispro', 'true');
+            document.getElementById('userStatusBadge').innerText = 'PRO';
+            document.getElementById('userStatusBadge').className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-gradient-to-r from-amber-400 to-amber-600 text-black shadow';
+            document.getElementById('upgradeBtnText').innerText = 'Statut PRO Actif';
+            document.getElementById('quotaContainer').classList.add('hidden');
+        }
+
+        function filterCategory(cat) {
+            state.currentCategory = cat;
+            renderPresets();
+        }
+
+        function renderPresets() {
+            const select = document.getElementById('presetSelect');
+            select.innerHTML = '<option value="">-- Personnalisé --</option>';
+            const filtered = state.currentCategory === 'all' ? PRESETS : PRESETS.filter(p => p.category === state.currentCategory);
+            filtered.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.innerText = (p.isPro ? '🔒 [PRO] ' : '') + p.title;
+                select.appendChild(opt);
+            });
+        }
+
+        function applyPreset() {
+            const presetId = document.getElementById('presetSelect').value;
+            const preset = PRESETS.find(p => p.id === presetId);
+            if (!preset) return;
+            if (preset.isPro && !state.isPro) return openPaywallModal();
+
+            document.getElementById('fieldRole').value = preset.role;
+            document.getElementById('fieldTask').value = preset.task;
+            document.getElementById('fieldContext').value = preset.context;
+            document.getElementById('fieldFormat').value = preset.format;
+        }
+
+        function toggleModelFields() {
+            const model = document.getElementById('modelSelect').value;
+            document.getElementById('midjourneyPanel').classList.toggle('hidden', model !== 'midjourney');
+        }
+
+        function handleGenerate() {
+            const role = document.getElementById('fieldRole').value || '[Expert]';
+            const task = document.getElementById('fieldTask').value || '[Tâche]';
+            const context = document.getElementById('fieldContext').value || '[Contexte]';
+            const format = document.getElementById('fieldFormat').value || '[Format]';
+            
+            const finalPrompt = `Tu es un expert reconnu en tant que : ${role}.\n\n**MISSION :**\n${task}\n\n**CONTEXTE :**\n${context}\n\n**FORMAT DE RÉPONSE :**\n${format}`;
+            document.getElementById('promptOutput').value = finalPrompt;
+            showToast('Prompt généré !', 'success');
+        }
+
+        function copyToClipboard() {
+            const text = document.getElementById('promptOutput').value;
+            if (!text) return showToast('Rien à copier', 'error');
+            navigator.clipboard.writeText(text);
+            showToast('Prompt copié ! 📋', 'success');
+        }
+
+        function downloadAsTxt() {
+            const text = document.getElementById('promptOutput').value;
+            if (!text) return showToast('Rien à télécharger', 'error');
+            const blob = new Blob([text], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `prompt-forge-${Date.now()}.txt`;
+            link.click();
+        }
+
+        function exportPdfNotion() { window.print(); }
+        function saveToFavorites() { showToast('Sauvegardé ! ⭐', 'success'); }
+        function openPaywallModal() { document.getElementById('paywallModal').classList.remove('hidden'); }
+        function closePaywallModal() { document.getElementById('paywallModal').classList.add('hidden'); }
+        
+        function redirectToStripe(plan) {
+            if (plan === 'monthly') {
+                window.location.href = 'https://buy.stripe.com/bJe28s8OeemtdlBcS3bZe01';
+            } else if (plan === 'lifetime') {
+                window.location.href = 'https://buy.stripe.com/bJefZid4ubahchxdW7bZe03';
+            }
+        }
+
+        function activateLicenseCode() {
+            const code = document.getElementById('licenseCodeInput').value.trim().toUpperCase();
+            if (code === 'PRO2026') {
+                enableProStatus();
+                closePaywallModal();
+                showToast('Licence activée ! 🎉', 'success');
+            } else {
+                showToast('Code invalide.', 'error');
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `p-3.5 rounded-xl border ${type === 'success' ? 'bg-emerald-900/90 border-emerald-500' : 'bg-rose-900/90 border-rose-500'} text-white text-xs font-semibold shadow-xl`;
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>
